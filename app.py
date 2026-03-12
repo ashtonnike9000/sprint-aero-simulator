@@ -76,6 +76,13 @@ with st.sidebar:
     cd_new = st.slider("Cd — new material", 0.20, 1.00, 0.56, 0.01)
     cd_pct = (cd_base - cd_new) / cd_base * 100
 
+    st.subheader("Uniform Mass")
+    uni_base_g = st.slider("Baseline kit (g)", 0, 300, 120, 5,
+                            help="Standard race singlet + shorts. Typical: 100-150g.")
+    uni_new_g = st.slider("New uniform (g)", 0, 300, 180, 5,
+                           help="Full-body suit in the new material. Typical: 150-250g.")
+    uni_delta_g = uni_new_g - uni_base_g
+
     st.divider()
     st.subheader("Environment")
     temp_c = st.slider("Temperature (C)", -10.0, 45.0, 20.0, 0.5)
@@ -91,18 +98,24 @@ with st.sidebar:
     st.divider()
     race_dist = st.selectbox("Race distance (m)", [60, 100, 200], index=1)
 
+# ── Total mass for each scenario ──
+mass_base = mass + uni_base_g / 1000.0
+mass_new = mass + uni_new_g / 1000.0
+
 # ── Calibrate F0 using the ORIGINAL race conditions ──
-# The athlete's muscles don't change with wind — F0 is locked to the
-# conditions under which they actually ran their target time.
+# F0 is calibrated with baseline kit mass and race-day wind from the preset.
 cal_wind = float(p.get("race_wind", 0.0))
-f0k = calibrate_f0(mass, ht, bw, v0, lam, alpha, cd_base, temp_c, alt_m, cal_wind, reaction, target, race_dist)
+f0k = calibrate_f0(mass_base, ht, bw, v0, lam, alpha, cd_base, temp_c, alt_m, cal_wind, reaction, target, race_dist)
 if f0k is None:
     f0k = 8.0
     st.sidebar.warning("Calibration failed — using default force.")
 
 # ── Simulate both materials under the user-selected wind ──
-rb = simulate(mass, ht, bw, f0k, v0, lam, alpha, cd_base, temp_c, alt_m, wind, reaction, race_dist)
-rn = simulate(mass, ht, bw, f0k, v0, lam, alpha, cd_new, temp_c, alt_m, wind, reaction, race_dist)
+rb = simulate(mass_base, ht, bw, f0k, v0, lam, alpha, cd_base, temp_c, alt_m, wind, reaction, race_dist)
+# Keep absolute propulsive force the same — the athlete's muscles don't
+# change with uniform mass. Adjust f0_kg so F0_abs = f0k * mass_base.
+f0k_new = f0k * mass_base / mass_new
+rn = simulate(mass_new, ht, bw, f0k_new, v0, lam, alpha, cd_new, temp_c, alt_m, wind, reaction, race_dist)
 
 ftb = rb["ft"]; ftn = rn["ft"]
 saved = (ftb - ftn) if ftb and ftn else 0
@@ -114,8 +127,11 @@ sel_label = f"**{preset}** — " if preset != "Custom" else ""
 wind_note = f"Wind {wind:+.1f} m/s"
 if abs(cal_wind - wind) > 0.05:
     wind_note += f" (calibrated at {cal_wind:+.1f})"
+uni_note = ""
+if uni_delta_g != 0:
+    uni_note = f" | Uniform {uni_delta_g:+d}g ({mass_base:.2f} to {mass_new:.2f} kg)"
 st.markdown(
-    f"{sel_label}Cd {cd_base:.2f} to {cd_new:.2f} ({cd_pct:.0f}% reduction) | "
+    f"{sel_label}Cd {cd_base:.2f} to {cd_new:.2f} ({cd_pct:.0f}% reduction){uni_note} | "
     f"Air density {rb['rho']:.3f} kg/m3 | Frontal area {rb['A']:.3f} m2 | "
     f"{wind_note}"
 )
