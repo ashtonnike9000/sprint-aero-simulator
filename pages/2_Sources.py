@@ -85,6 +85,10 @@ st.markdown("""
 | **Graubner & Nixdorf (2011)** | Biomechanical analysis of sprint/hurdles at 2009 IAAF WC | [New Studies in Athletics, 26(1), 19-53](https://worldathletics.org/news/news/biomechanical-analysis-of-the-sprint-and-hurd) |
 | **Čoh (2019)** | Usain Bolt biomechanical model — 2D kinematics at max velocity | [FACTA UNIV. Phys Ed Sport, 17(1), 1-13](https://doi.org/10.22190/FUPES190304003C) |
 | **IAAF Berlin 2009 Report** | Official biomechanics report on men's 100m WR race | [PDF (Sprint Men)](https://worldathletics.org/download/download?filename=76ade5f9-75a0-4fda-b9bf-1b30be6f60d2.pdf&urlslug=1+-+Biomechanics+Report+WC+Berlin+2009+Sprint+Men) |
+| **Healy, Kenny & Harrison (2022)** | Profiling elite male 100m: vLoss = 3.3% avg across 82 elite sprinters | [J Sport Health Sci, 11(1), 75-84](https://pubmed.ncbi.nlm.nih.gov/35151419/) |
+| **Tomazin, Morin et al. (2012)** | Fatigue after 100-400m treadmill sprints: MVC unchanged after 100m | [Eur J Appl Physiol, 112(3), 1027-36](https://doi.org/10.1007/s00421-011-2058-1) |
+| **Nagahara & Girard (2020)** | Spatiotemporal and GRF changes during decelerated sprinting | [Scand J Med Sci Sports, 31(5)](https://pubmed.ncbi.nlm.nih.gov/33217086/) |
+| **Morin et al. (2011)** | Force application technique degrades more than raw force during fatigue | [J Biomech, 44(15), 2719-23](https://doi.org/10.1016/j.jbiomech.2011.07.020) |
 """)
 
 # ── Drag Model References ──

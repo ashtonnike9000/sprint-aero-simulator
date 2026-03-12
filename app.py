@@ -51,10 +51,12 @@ with st.sidebar:
     target = st.slider("Fastest 100m time (s)", 9.00, 14.00, float(p["target"]), 0.01,
                         help="The athlete's current best 100m. The model calibrates to this.")
     fatigue_pct = st.slider("End-race fatigue (%)", 5, 45, int(p["fatigue_pct"]), 1,
-                             help="How much force capacity the athlete loses by the finish. "
-                                  "15-18% = elite male (minimal fade). "
-                                  "20-25% = moderate. "
-                                  "30%+ = heavy end-race slowdown.")
+                             help="Internal force-capacity decay over the race duration. "
+                                  "This is NOT the same as observable speed loss — elite sprinters "
+                                  "only lose 2-5% of peak speed (Healy et al., 2022, n=82), but the "
+                                  "underlying force capacity decays more because the Hill F-V "
+                                  "relationship buffers the effect. "
+                                  "Preset values are calibrated to real split data.")
     reaction = st.slider("Reaction time (s)", 0.100, 0.300, float(p["reaction"]), 0.001)
 
     with st.expander("Advanced"):
@@ -270,28 +272,49 @@ $$v_0(t) = v_{0,\text{init}} \cdot e^{-\alpha \lambda t}$$
 
 | Symbol | What it is |
 |--------|-----------|
-| $\lambda$ | Fatigue rate — how fast the athlete's force capacity decays (controlled by the "End-race fatigue %" slider) |
+| $\lambda$ | Fatigue rate — how fast the athlete's force-velocity capacity decays |
 | $\alpha$ | Speed-ceiling decay factor — how much the speed ceiling drops relative to force |
 
 **What it is:** Over the course of a 100m, the athlete's phosphocreatine (PCr) stores deplete
 and hydrogen ions accumulate in the muscles. We model this as an exponential decay of both
-the maximum force ($F_0$) and the maximum speed ($v_0$) the athlete can produce.
+the maximum force ($F_0$) and the theoretical max speed ($v_0$) the athlete can produce.
 
 **Why it makes sense:** Every 100m race shows the same pattern: explosive acceleration,
 a peak around 50-70m, then a slight slowdown to the finish. Even Usain Bolt slowed down in the
-last 20m of his 9.58 world record. The reason is biochemical — the ATP-PCr energy system that
-powers the first 6-7 seconds begins to deplete, and the glycolytic system that takes over
-produces metabolic byproducts that reduce muscle output. An exponential decay captures this
-gradual "draining of the battery" and naturally produces the three-phase shape (accelerate,
-peak, decelerate) we see in every real sprint.
+last 20m of his 9.58 world record.
 
-**The fatigue slider:** "End-race fatigue 20%" means that by the finish line, the athlete's
-force-producing capacity has dropped to 80% of what it was at the start:
+**What the research says about 100m fatigue:**
+
+- **Observable speed loss is small.** Healy et al. (2022) studied 82 elite male sprinters
+  (9.58-10.59s) and found average speed loss from peak to finish of just **3.3% +/- 1.2%**.
+  Bolt shows ~1.8%, most Olympic finalists show 2-4%.
+
+- **Maximal voluntary force is NOT impaired after a 100m.** Tomazin, Morin et al. (2012)
+  measured neuromuscular function before and after 100m, 200m, and 400m treadmill sprints.
+  MVC (knee extensor torque) was unchanged after the 100m — force loss was only detectable
+  after the 400m. This suggests the 100m deceleration is not caused by raw strength loss.
+
+- **What DOES cause the slowdown?** Nagahara & Girard (2020) found that during deceleration,
+  propulsive force drops ~3.5%, stride frequency drops ~3.5%, but *net anteroposterior force*
+  drops ~64%. The issue is the athlete's ability to **apply force horizontally at high speed**
+  — a coordination/technique degradation, not a strength deficit. Morin & Samozino showed
+  that "force application technique" (the ratio of horizontal to total force) deteriorates
+  far more (~19%) than total force production (~6%) during fatigue.
+
+**How our model handles this:** The exponential decay of both $F_0$ and $v_0$ is a
+*lumped approximation* — it doesn't distinguish between raw force loss, speed-ceiling
+reduction, and coordination breakdown. But the combined effect correctly reproduces the
+observed 2-5% speed decline because the Hill F-V relationship buffers the parameter decay:
+even a ~16-20% internal capacity loss translates to only ~2-4% speed loss, since slowing
+slightly lets the athlete apply more force at the lower speed.
+
+**The fatigue slider** controls this internal capacity decay:
 
 $$\text{fatigue \%} = \left(1 - e^{-\lambda \cdot T_{\text{race}}}\right) \times 100$$
 
-Elite male sprinters typically show 16-20% fatigue (Bolt is ~16%). Female sprinters
-tend to show 23-27%, partly due to smaller PCr reserves relative to race duration.
+The preset values (16-27%) are calibrated against real split data. The actual speed loss
+you'll see in the dashboard metrics (the "End-Race Drop" number) matches the 2-5% range
+from the literature.
 
 ---
 
