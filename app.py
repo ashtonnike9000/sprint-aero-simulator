@@ -226,21 +226,144 @@ with tab6:
 st.divider()
 with st.expander("Model Details & Equations"):
     st.markdown(r"""
-### Equation of Motion
+### 1. Equation of Motion
+
 $$m \frac{dv}{dt} = F_{\text{prop}}(v, t) \;-\; F_{\text{drag}}(v)$$
 
-### Propulsive Force -- Hill F-V with Metabolic Fatigue
-$$F_{\text{prop}} = F_0(t) \cdot \max\!\left(0,\; 1 - \frac{v}{v_0(t)}\right)$$
-$$F_0(t) = F_{0,\text{init}} \cdot e^{-\lambda t} \qquad v_0(t) = v_{0,\text{init}} \cdot e^{-\alpha \lambda t}$$
+**What it is:** Newton's second law applied to a sprinter. At every instant, the athlete's
+acceleration equals the net force (propulsion minus drag) divided by body mass.
 
-The "End-race fatigue %" slider controls how much force capacity is lost by the finish:
+**Why it makes sense:** A sprinter is essentially a force battle. Their muscles push them
+forward, air resistance pushes back. Whoever is "winning" at any moment determines whether
+the athlete is speeding up or slowing down. This is the governing equation that the
+simulator solves thousands of times per second to build the full velocity curve.
+
+---
+
+### 2. Propulsive Force — Hill Force-Velocity Relationship
+
+$$F_{\text{prop}} = F_0(t) \cdot \max\!\left(0,\; 1 - \frac{v}{v_0(t)}\right)$$
+
+| Symbol | What it is |
+|--------|-----------|
+| $F_0(t)$ | Maximum force the athlete can produce at zero speed (like pushing off the blocks) |
+| $v_0(t)$ | Theoretical max speed if there were no drag and no fatigue |
+| $v$ | Current speed |
+
+**What it is:** The Hill equation is a foundational model from muscle physiology (A.V. Hill, 1938).
+It says that the faster a muscle is already contracting, the less additional force it can produce.
+At zero speed (blocks), force is maximal. As the athlete approaches top speed, the force they
+can apply to the ground drops toward zero.
+
+**Why it makes sense:** Think of pedaling a bike — in a low gear (slow), you can push hard.
+In a high gear (fast), you can barely push at all. Muscles work the same way. This is why
+sprinters accelerate explosively out of the blocks but the rate of speed gain tapers off
+as they approach top speed. The force doesn't just vanish at some arbitrary point — it
+*continuously* decreases as speed builds, which matches what we see in real sprint data.
+
+---
+
+### 3. Metabolic Fatigue — Why Athletes Slow Down
+
+$$F_0(t) = F_{0,\text{init}} \cdot e^{-\lambda t}$$
+$$v_0(t) = v_{0,\text{init}} \cdot e^{-\alpha \lambda t}$$
+
+| Symbol | What it is |
+|--------|-----------|
+| $\lambda$ | Fatigue rate — how fast the athlete's force capacity decays (controlled by the "End-race fatigue %" slider) |
+| $\alpha$ | Speed-ceiling decay factor — how much the speed ceiling drops relative to force |
+
+**What it is:** Over the course of a 100m, the athlete's phosphocreatine (PCr) stores deplete
+and hydrogen ions accumulate in the muscles. We model this as an exponential decay of both
+the maximum force ($F_0$) and the maximum speed ($v_0$) the athlete can produce.
+
+**Why it makes sense:** Every 100m race shows the same pattern: explosive acceleration,
+a peak around 50-70m, then a slight slowdown to the finish. Even Usain Bolt slowed down in the
+last 20m of his 9.58 world record. The reason is biochemical — the ATP-PCr energy system that
+powers the first 6-7 seconds begins to deplete, and the glycolytic system that takes over
+produces metabolic byproducts that reduce muscle output. An exponential decay captures this
+gradual "draining of the battery" and naturally produces the three-phase shape (accelerate,
+peak, decelerate) we see in every real sprint.
+
+**The fatigue slider:** "End-race fatigue 20%" means that by the finish line, the athlete's
+force-producing capacity has dropped to 80% of what it was at the start:
+
 $$\text{fatigue \%} = \left(1 - e^{-\lambda \cdot T_{\text{race}}}\right) \times 100$$
 
-### Aerodynamic Drag
+Elite male sprinters typically show 16-20% fatigue (Bolt is ~16%). Female sprinters
+tend to show 23-27%, partly due to smaller PCr reserves relative to race duration.
+
+---
+
+### 4. Aerodynamic Drag — The Force We're Trying to Reduce
+
 $$F_{\text{drag}} = \tfrac{1}{2}\,\rho \cdot C_d \cdot A_{\text{eff}}(t) \cdot (v - v_{\text{wind}})^2$$
 
-### Calibration
-Model parameters are fit to **real 10m split data** from World Athletics
-and the Athletes First database (see the **Model Validation** page). The force parameter
-is auto-calibrated to match the athlete's best race time.
+| Symbol | What it is |
+|--------|-----------|
+| $\rho$ | Air density (kg/m3) — depends on temperature and altitude |
+| $C_d$ | Drag coefficient — how "slippery" the shape/surface is (this is what the material changes) |
+| $A_{\text{eff}}(t)$ | Effective frontal area — how much body surface the air "sees" head-on |
+| $v - v_{\text{wind}}$ | Speed relative to the air (tailwind reduces it, headwind increases it) |
+
+**What it is:** The standard aerodynamic drag equation from fluid dynamics. The force of air
+resistance grows with the *square* of speed — so at 12 m/s it's four times larger than at 6 m/s.
+
+**Why it makes sense:** Drag matters more and more as the athlete gets faster. In the first
+10m (low speed), drag is negligible — maybe 2-3 N. By 60m (near peak speed of ~12 m/s),
+drag reaches 30-50 N depending on the athlete's size. That's equivalent to running with a
+3-5 kg weight pulling you back. Because of the squared relationship, even a modest Cd
+reduction (0.80 to 0.56 = 30%) meaningfully reduces the drag force at top speed, which is
+exactly where races are won and lost.
+
+**Frontal area ramp:** The model also accounts for the athlete's posture change — they start
+in a crouch (blocks, ~55% of full frontal area) and rise to upright running posture over
+the first ~1.5 seconds. This means drag grows not just from speed but also from the body
+"unfolding" into the wind.
+
+---
+
+### 5. Air Density — Why Altitude and Temperature Matter
+
+$$\rho = \frac{p}{R \cdot T}$$
+
+where pressure $p$ follows the ISA standard atmosphere model adjusted for altitude,
+$R$ = 287.058 J/(kg K), and $T$ is absolute temperature.
+
+**Why it makes sense:** Thinner air means less drag. Mexico City (2,240m altitude) has air
+density ~20% lower than sea level, which is one reason sprint times tend to be faster at
+altitude. Hot days also reduce air density slightly. The simulator accounts for both so you
+can model different race venues realistically.
+
+---
+
+### 6. Calibration — Tying the Model to Real Data
+
+Model parameters ($v_0$, $\lambda$, $\alpha$) for each athlete preset are optimized against
+**real 10m timing-gate data** using Nelder-Mead optimization — the algorithm adjusts the
+parameters until the simulated velocity at each 10m mark matches the actual data as closely
+as possible.
+
+Once those shape parameters are set, the force parameter $F_0$ is auto-calibrated using
+**Brent's root-finding method** to exactly match the athlete's best race time.
+
+**Why this two-step approach:** The shape parameters ($v_0$, $\lambda$, $\alpha$) control
+*how* the athlete runs — their acceleration curve, where they peak, how much they fade.
+The force parameter ($F_0$) controls *how fast* they go overall. By fitting shape first
+(to split data) and then scaling force (to total time), we get a model that reproduces both
+the *profile* and the *result* of a real race. Typical fit quality is RMSE 0.12-0.21 m/s
+across all validated athletes (see the **Model Validation** page).
+
+---
+
+### 7. Why This Matters for Material Testing
+
+The key insight: **the same model runs twice** — once with the baseline Cd (bare cylinder,
+0.80) and once with the new material Cd (0.56). Everything else stays identical. So the
+time difference isolates the effect of the material alone.
+
+Because the model captures realistic sprint dynamics (acceleration phase where drag barely
+matters, peak speed phase where drag is highest, deceleration phase where reduced drag
+extends the athlete's ability to maintain speed), the estimated time savings are
+physically grounded rather than just a back-of-envelope percentage.
     """)
