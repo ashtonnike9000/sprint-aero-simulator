@@ -38,7 +38,8 @@ with st.sidebar:
     preset = st.selectbox("Athlete Preset", names)
     p = ATHLETES.get(preset, dict(
         mass=70, height=1.75, bw=0.37, v0=12.5, lam=0.025, alpha=0.40,
-        fatigue_pct=20, reaction=0.150, target=10.50, gender="M"))
+        fatigue_pct=20, reaction=0.150, target=10.50, gender="M",
+        race_wind=0.0))
 
     st.divider()
     st.subheader("Athlete")
@@ -79,18 +80,27 @@ with st.sidebar:
     st.subheader("Environment")
     temp_c = st.slider("Temperature (C)", -10.0, 45.0, 20.0, 0.5)
     alt_m = st.slider("Altitude (m)", 0, 2500, 0, 50)
-    wind = st.slider("Wind (m/s)", -5.0, 5.0, 0.0, 0.1,
-                      help="+tail / -head. IAAF record limit: +2.0")
+    wind = st.slider("Race-day wind (m/s)", -5.0, 5.0,
+                      float(p.get("race_wind", 0.0)), 0.1,
+                      help="+tail / -head. IAAF record limit: +2.0. "
+                           "Defaults to the wind from the athlete's reference race. "
+                           "Changing this lets you see how the material comparison "
+                           "plays out in different wind conditions — the athlete's "
+                           "strength stays fixed.")
 
     st.divider()
     race_dist = st.selectbox("Race distance (m)", [60, 100, 200], index=1)
 
-# ── Simulate ──
-f0k = calibrate_f0(mass, ht, bw, v0, lam, alpha, cd_base, temp_c, alt_m, wind, reaction, target, race_dist)
+# ── Calibrate F0 using the ORIGINAL race conditions ──
+# The athlete's muscles don't change with wind — F0 is locked to the
+# conditions under which they actually ran their target time.
+cal_wind = float(p.get("race_wind", 0.0))
+f0k = calibrate_f0(mass, ht, bw, v0, lam, alpha, cd_base, temp_c, alt_m, cal_wind, reaction, target, race_dist)
 if f0k is None:
     f0k = 8.0
     st.sidebar.warning("Calibration failed — using default force.")
 
+# ── Simulate both materials under the user-selected wind ──
 rb = simulate(mass, ht, bw, f0k, v0, lam, alpha, cd_base, temp_c, alt_m, wind, reaction, race_dist)
 rn = simulate(mass, ht, bw, f0k, v0, lam, alpha, cd_new, temp_c, alt_m, wind, reaction, race_dist)
 
@@ -101,10 +111,13 @@ pct = saved / ftb * 100 if ftb else 0
 # ── Header ──
 st.markdown("## Sprint Aerodynamic Drag Simulator")
 sel_label = f"**{preset}** — " if preset != "Custom" else ""
+wind_note = f"Wind {wind:+.1f} m/s"
+if abs(cal_wind - wind) > 0.05:
+    wind_note += f" (calibrated at {cal_wind:+.1f})"
 st.markdown(
     f"{sel_label}Cd {cd_base:.2f} to {cd_new:.2f} ({cd_pct:.0f}% reduction) | "
     f"Air density {rb['rho']:.3f} kg/m3 | Frontal area {rb['A']:.3f} m2 | "
-    f"Wind {wind:+.1f} m/s"
+    f"{wind_note}"
 )
 
 c1, c2, c3, c4, c5, c6 = st.columns(6)
