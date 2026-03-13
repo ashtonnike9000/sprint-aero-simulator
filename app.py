@@ -261,13 +261,30 @@ with st.expander("Model Details & Equations"):
 
 $$m \frac{dv}{dt} = F_{\text{prop}}(v, t) \;-\; F_{\text{drag}}(v)$$
 
-**What it is:** Newton's second law applied to a sprinter. At every instant, the athlete's
-acceleration equals the net force (propulsion minus drag) divided by body mass.
+**What it is:** Newton's second law in the horizontal direction. At every instant, the
+athlete's acceleration equals the net horizontal force (propulsion minus drag) divided by
+body mass (including uniform).
 
-**Why it makes sense:** A sprinter is essentially a force battle. Their muscles push them
-forward, air resistance pushes back. Whoever is "winning" at any moment determines whether
-the athlete is speeding up or slowing down. This is the governing equation that the
-simulator solves thousands of times per second to build the full velocity curve.
+**Why only two forces?** On a flat track, only two forces act horizontally:
+
+- **Propulsive force** ($F_{\text{prop}}$) — the horizontal ground reaction force from the
+  athlete pushing backward against the track. This IS the friction force between the shoe
+  and the surface. Friction is not an opponent here — it is the *mechanism* of propulsion.
+
+- **Aerodynamic drag** ($F_{\text{drag}}$) — air resistance opposing forward motion.
+
+**What about gravity?** Gravity ($mg$) acts vertically downward and is balanced by the
+vertical ground reaction force (normal force). On a flat track, gravity has no horizontal
+component, so it does not appear in this equation. It would matter on a slope. Mass ($m$,
+in kg) does appear in $F = ma$ — a heavier athlete needs more force to achieve the same
+acceleration, regardless of gravity.
+
+**What about friction limits?** On a modern polyurethane track with spiked shoes, the
+friction coefficient is ~1.0+. Combined with vertical ground reaction forces of 3-5x body
+weight during sprinting (Weyand et al., 2000), the available friction far exceeds the
+horizontal force the athlete can produce. Sprinters are muscle-limited, not
+friction-limited, which is why the Hill force-velocity model (below) is the binding
+constraint.
 
 ---
 
